@@ -1,0 +1,28 @@
+{% load static %}
+<div class="container">
+  <header class="d-flex flex-wrap align-items-center justify-content-center justify-content-md-between py-3 mb-4 border-bottom">
+    <div class="col-md-3 mb-2 mb-md-0">
+      <a href=" {% url 'zipprocessor:homepage' %}" class="d-inline-flex link-body-emphasis text-decoration-none">
+        <img class="tn-atom__img t-img loaded" data-original="tild6430-3464-4333-b263-613463326265__logo-codd.svg" alt="" imgfield="tn_img_1705317620387" src="{% static 'img/logo.svg' %}">
+      </a>
+    </div>
+
+    <ul class="nav col-12 col-md-auto mb-2 justify-content-center mb-md-0">
+      <li><a href=" {% url 'zipprocessor:homepage' %}" class="px-2 btn btn-dark">На главную</a></li>
+    </ul>
+
+    <div class="col-md-3 text-end">
+      {% if request.user.is_authenticated %}
+        <form action="{% url 'user:logout' %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-warning me-2">Выйти</button>
+        </form>
+      {% else %}
+        <form action="{% url 'user:login' %}" method="get">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-success me-2">Войти</button>
+        </form>
+      {% endif %}
+    </div>
+  </header>
+</div>

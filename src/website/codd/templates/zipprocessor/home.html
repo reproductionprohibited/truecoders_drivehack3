@@ -1,0 +1,42 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container px-4 py-5 mt-5">
+  {% if errormessage %}
+    <p class="text-danger">{{ errormessage }}</p>
+  {% endif %}
+  <p class="text-center display-5">
+    Загрузить zip-архив с данными ТОИ
+  </p>
+  <div style="border-radius: 12px; background-color: #5d565855; padding-top: 2em; padding-bottom: 2em; margin-left: 12em; margin-right: 12em">
+    <section class="row justify-content-center">
+      <div class="col-lg-12 col-md-6 col-sm-12">
+        <form class="basic-form mb-1" method="post" role="form" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="text-center text-danger m-3">
+            {{ form.non_field_errors }}
+          </div>
+          <div class="controls text-center">
+            {% for field in form %}
+            <div class="row justify-content-center">
+              <div class="col-md-6 mb-4">
+                <div class="form-group"> 
+                  {{ field }}
+                  {% for error in field.errors %}
+                    <div class="help-block with-errors text-danger">{{ error|safe }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+            <div class="row justify-content-center">
+              <div class="col-md-8"> <input type="submit" href=" {% url 'zipprocessor:processing' %} " class="btn btn-success btn-send w-50" value="Отправить"> </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
