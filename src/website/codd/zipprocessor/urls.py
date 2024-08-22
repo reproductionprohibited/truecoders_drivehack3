@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.urls import path
 
 from zipprocessor.views import (
+    CameraDataView,
     HomepageView,
     ProcessingView,
     ResultView,
@@ -29,5 +30,10 @@ urlpatterns = [
         'result/',
         login_required(ResultView.as_view()),
         name='result',
+    ),
+    path(
+        'cameradata/',
+        login_required(CameraDataView.as_view()),
+        name='camera_data',
     )
 ]

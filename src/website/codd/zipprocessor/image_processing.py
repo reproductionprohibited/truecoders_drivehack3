@@ -1,7 +1,9 @@
+from typing import Dict, List
 from pathlib import Path
+from pprint import pprint
 import os 
 import json
-import time 
+import time
 
 import numpy as np
 from fuzzywuzzy import fuzz
@@ -9,24 +11,24 @@ import easyocr
 import cv2 
 
 
-
 class Preprocesser:
     def __init__(self) -> None:
         self.reader = easyocr.Reader(['ru'], gpu=False)
 
-    def get_data(self, src_to_data):
+    def get_data(self, filepath: str = ''):
         count = 0
-        with open(fr"{src_to_data}/BoardsFinal.json") as f:
+        with open('/'.join([filepath, 'BoardsFinal.json'])) as f:
             data = json.load(f)
             res = {}
-            for el in data:
-                size = el['Size']
-                num = el['Num']
-                screenshots_src = fr"{src_to_data}/RealTime/{num}/RealTime"
+            pprint(data, stream=open('debug.txt', mode='w'))
+            for element in data:
+                size = element['Size']
+                num = element['Num']
+                screenshots_src = fr"{filepath}/RealTime/{num}/RealTime"
                 if os.path.isdir(screenshots_src):
                     content_data_src = []
-                    for id_content in el['Content']['activeContent']:
-                        path_to_content = fr"{src_to_data}/AsiuddContent/{id_content['id']}/"
+                    for id_content in element['Content']['activeContent']:
+                        path_to_content = fr"{filepath}/AsiuddContent/{id_content['id']}/"
                         if os.path.isdir(path_to_content):
                             p = Path(path_to_content)
                             for content_path in p.rglob("*"):
@@ -36,28 +38,23 @@ class Preprocesser:
 
                     res[str(screenshots_src)] = [content_data_src, num]
                     count += 1 
-                    if count == 2:
+                    if count == 3:
                         break
 
         return res 
     
     def get_needed_texts(self, path_to_img):
-        result = self.reader.readtext(path_to_img, batch_size=64)
+        result = self.reader.readtext(path_to_img, batch_size=128)
         text = ' '.join([result[i][-2] for i in range(len(result))])
-        # print(text)
         return text 
 
 
     def preprocess(self, img):
         norm_img = np.zeros((img.shape[0], img.shape[1]))
-        img = cv2.normalize(img, norm_img, 0, 255, cv2.NORM_MINMAX) # normalizing
-
-        img = img[:img.shape[0] - 20,] # cropping
-
-        img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15) # removing noise
-
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # get_grayscale
-        
+        img = cv2.normalize(img, norm_img, 0, 255, cv2.NORM_MINMAX)
+        img = img[:img.shape[0] - 20,]
+        img = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         return img
 
     def run_processing(self, data):
@@ -83,19 +80,25 @@ class Preprocesser:
                     count_mismatch += 1
                     current.append(board_img)
             result.append({
-                'num':num,
+                'num': num,
                 'display': current,
-                'mismatch_percentage': count_mismatch / len(board_imgs)
+                'mismatch_percentage': round(count_mismatch / len(board_imgs), 2)
                 })
         return result
-            
 
+
+def run_image_processing(filepath: str) -> List[Dict]:
+    pr = Preprocesser()
+    data = pr.get_data('/'.join([filepath, 'hackaton']))
+    res = pr.run_processing(data)
+    return res
 
 if __name__ == "__main__":
+    # print()
+    # print(run_image_processing('../media/1724336905174315'))
     start = time.time()
     pr = Preprocesser()
-    data = pr.get_data('../../data/')
-    # print(len(data))
+    data = pr.get_data('../media/1724336905174315/hackaton')
     
     res = pr.run_processing(data)
     for el in res:

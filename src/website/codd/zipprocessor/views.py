@@ -1,14 +1,18 @@
-# from codd.settings import MEDIA_ROOT
-
-from django.views.generic import TemplateView, View
-from django.urls import reverse_lazy
-from django.http import HttpResponseRedirect, request
-from django.shortcuts import render
 from datetime import datetime, UTC
-import zipfile
+import io
 import pathlib
 import random
+import zipfile
+
+from django.urls import reverse_lazy
+from django.views.generic import View, TemplateView
+from django.http import HttpResponseRedirect, FileResponse
+from django.shortcuts import render
+import pandas
+
+from .image_processing import run_image_processing
 from .forms import UploadFileForm
+from .models import Record
 
 
 def generate_mock_data() -> list[dict]:
@@ -16,7 +20,7 @@ def generate_mock_data() -> list[dict]:
             {
                 'num': 2 * i + 1,
                 'display': [random.randint(10000, 20000) for _ in range(3)],
-                'mismatch_percentage': random.randint(0, 10 ** 9) / 10 ** 9
+                'mismatch_percentage': random.randint(0, 10 ** 2) / 10 ** 2
             } for i in range(20)
         ]
 
@@ -58,13 +62,11 @@ class HomepageView(View):
 
 class ProcessingView(View):
     def get(self, request, *args, **kwargs):
-        filename = kwargs['filename']
         return render(request, 'zipprocessor/processing.html')
     
     def post(self, request, *args, **kwargs):
-        print(args, kwargs)
-        
-        # HERE WE DO THE PROCESSING...
+        filename = kwargs['filename']
+        # result_data = run_image_processing(filepath=f'media/{filename}')
         result_data = generate_mock_data()
         request.session['result_data'] = result_data
         return HttpResponseRedirect(reverse_lazy('zipprocessor:result'))
@@ -72,10 +74,76 @@ class ProcessingView(View):
 
 class ResultView(View):
     template_name = 'zipprocessor/result.html'
-  
+
     def get(self, request, *args, **kwargs):
-        print(args, kwargs)
         result_data = request.session.get('result_data', None)
-        del request.session['result_data']
+        # del request.session['result_data']
         print(result_data)
+        for chunk in result_data:
+            num = chunk['num']
+            mismatch_count = len(chunk['display'])
+            mismatch_percentage = chunk['mismatch_percentage']
+            record, created = Record.objects.update_or_create(
+                num=num,
+                defaults={
+                    'mismatch_count': mismatch_count,
+                    'mismatch_percentage': mismatch_percentage
+                }
+            )            
+            
         return render(request, 'zipprocessor/result.html', context={'result_data': result_data})
+
+    def post(self, request, *args, **kwargs):
+        result_data = request.session.get('result_data', None)
+        print(result_data)
+
+        df = pandas.DataFrame(result_data)
+
+        buffer = io.BytesIO()
+        df.to_csv(buffer, index=False, sep=';')
+        buffer.seek(0)
+
+        response = FileResponse(
+            buffer, 
+            content_type='text/csv',
+            as_attachment=True,
+            filename='result.csv'
+        )
+        return response
+    
+
+class CameraDataView(View):
+    def get(self, request):
+        records = Record.objects.all().order_by('num')
+        data = [
+            {
+                'num': record.num,
+                'mismatch_cnt': record.mismatch_count,
+                'mismatch_percentage': record.mismatch_percentage,
+                'last_updated': record.last_modified,
+            } for record in records
+        ]
+        return render(request, 'zipprocessor/camera_data.html', context={'result_data': data})
+
+    def post(self, request):
+        records = Record.objects.all().order_by('num')
+        data = [
+            {
+                'num': record.num,
+                'mismatch_cnt': record.mismatch_count,
+                'mismatch_percentage': record.mismatch_percentage,
+                'last_updated': record.last_modified.strftime("%d/%m/%Y %H:%M:%S"),
+            } for record in records
+        ]
+        df = pandas.DataFrame(data)
+        buffer = io.BytesIO()
+        df.to_csv(buffer, index=False, sep=';')
+        buffer.seek(0)
+
+        response = FileResponse(
+            buffer,
+            content_type='text/csv',
+            as_attachment=True,
+            filename='result.csv'
+        )
+        return response
