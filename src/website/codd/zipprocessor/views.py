@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timedelta
 import io
 import pathlib
 import random
@@ -12,14 +12,14 @@ import pandas
 
 from .image_processing import run_image_processing
 from .forms import UploadFileForm
-from .models import Record
+from .models import Record, InvalidImage
 
 
 def generate_mock_data() -> list[dict]:
     return [
             {
                 'num': 2 * i + 1,
-                'display': [random.randint(10000, 20000) for _ in range(3)],
+                'display': [str(random.randint(10000, 20000)) for _ in range(random.randint(0, 3))],
                 'mismatch_percentage': random.randint(0, 10 ** 2) / 10 ** 2
             } for i in range(20)
         ]
@@ -89,13 +89,25 @@ class ResultView(View):
                     'mismatch_count': mismatch_count,
                     'mismatch_percentage': mismatch_percentage
                 }
-            )            
+            )
+            invalid_image_ids = record.invalid_images.all()
+            for invalid_image_id in chunk['display']:
+                if invalid_image_id not in invalid_image_ids:
+                    inst = InvalidImage.objects.create(image_id=invalid_image_id)
+                    record.invalid_images.add(inst)
             
         return render(request, 'zipprocessor/result.html', context={'result_data': result_data})
 
     def post(self, request, *args, **kwargs):
-        result_data = request.session.get('result_data', None)
-        print(result_data)
+        session_data = request.session.get('result_data', None)
+        result_data = [
+            {
+                'num': row['num'],
+                'mismatch_cnt': len(row['display']),
+                'mismatch_percentage': row['mismatch_percentage'],
+                'mismatch_images': ','.join(row['display'])
+            } for row in session_data
+        ]
 
         df = pandas.DataFrame(result_data)
 
@@ -114,25 +126,28 @@ class ResultView(View):
 
 class CameraDataView(View):
     def get(self, request):
-        records = Record.objects.all().order_by('num')
+        records = Record.objects.all().order_by('-mismatch_count', '-mismatch_percentage', '-last_modified', 'num')
         data = [
             {
                 'num': record.num,
+                'last_updated': record.last_modified,
                 'mismatch_cnt': record.mismatch_count,
                 'mismatch_percentage': record.mismatch_percentage,
-                'last_updated': record.last_modified,
+                'mismatch_img_ids': ','.join([img.image_id for img in record.invalid_images.all()])
             } for record in records
         ]
         return render(request, 'zipprocessor/camera_data.html', context={'result_data': data})
 
     def post(self, request):
-        records = Record.objects.all().order_by('num')
+        records = Record.objects.all().order_by('-mismatch_count', '-mismatch_percentage', '-last_modified', 'num')
+        data = []
         data = [
             {
                 'num': record.num,
+                'last_updated': (record.last_modified + timedelta(hours=3)).strftime("%d/%m/%Y %H:%M:%S"),
                 'mismatch_cnt': record.mismatch_count,
                 'mismatch_percentage': record.mismatch_percentage,
-                'last_updated': record.last_modified.strftime("%d/%m/%Y %H:%M:%S"),
+                'mismatch_img_ids': ','.join([img.image_id for img in record.invalid_images.all()])
             } for record in records
         ]
         df = pandas.DataFrame(data)
