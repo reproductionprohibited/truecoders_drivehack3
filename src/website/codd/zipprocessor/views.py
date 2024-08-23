@@ -122,7 +122,7 @@ class ResultView(View):
             filename='result.csv'
         )
         return response
-    
+
 
 class CameraDataView(View):
     def get(self, request):
