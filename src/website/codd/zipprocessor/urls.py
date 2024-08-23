@@ -4,6 +4,7 @@ from django.urls import path
 
 from zipprocessor.views import (
     CameraDataView,
+    CameraDetailsView,
     HomepageView,
     ProcessingView,
     ResultView,
@@ -35,5 +36,10 @@ urlpatterns = [
         'cameradata/',
         login_required(CameraDataView.as_view()),
         name='camera_data',
-    )
+    ),
+    path(
+        'cameradetails/<int:num>',
+        login_required(CameraDetailsView.as_view()),
+        name='detail_camera_photos',
+    ),
 ]

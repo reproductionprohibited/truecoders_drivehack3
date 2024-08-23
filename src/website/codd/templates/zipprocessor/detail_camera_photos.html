@@ -1,0 +1,38 @@
+{% extends "_base.html" %}
+{% load static %}
+
+{% block title %}
+  Данные камеры
+{% endblock %}
+
+{% block content %}
+<div class="container text-center">
+  <h1 class="text-center my-4">Номер камеры: {{ num }}</h1>
+  <button class="btn btn-primary btn-lg px-4 gap-3 mb-4">Подключиться к камере</button>
+  <div class="row">
+    <h4 class="text-warning text-center">Невалидные изображения</h4>
+    {% for image_url in images %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card">
+          <img src="{{ MEDIA_URL }}{{ image_url }}" class="card-img-top">
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-center text-warning">Нет невалидных изображений</p>
+    {% endfor %}
+
+    {% if images %}
+      <h3 class="text-warning text-center mt-4">Отправленный контент</h3>
+      {% for content_image_url in content %}
+        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+          <div class="card">
+            <img src="{{ MEDIA_URL }}{{ content_image_url }}" class="card-img-top">
+          </div>
+        </div>
+      {% empty %}
+        <h4 class="text-warning text-center">Информации о загруженных на ТОИ изображений нет</h4>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

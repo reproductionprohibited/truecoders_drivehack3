@@ -38,7 +38,7 @@ class Preprocesser:
 
                     res[str(screenshots_src)] = [content_data_src, num]
                     count += 1 
-                    if count == 1:
+                    if count == 15:
                         break
 
         return res 
@@ -58,11 +58,13 @@ class Preprocesser:
         return img
 
     def run_processing(self, data):
+        alf = 'йцукенгшщзфывапролдячсмитьбю'
         result = []
         for board_imgs, true_content in data.items():
             texts = []
-            count_mismatch = 0
             num = true_content[1]
+            # if num != '10':
+            #     continue
             for img_content in true_content[0]: 
                 texts.append(self.get_needed_texts(img_content))
             path_to_screens = Path(board_imgs)
@@ -72,20 +74,27 @@ class Preprocesser:
                 count += 1
                 img = self.preprocess(cv2.imread(board_img))
                 board_text = self.reader.readtext(img)
-                board_text = ' '.join([board_text[i][-2] for i in range(len(board_text))])
+                board_text = ' '.join([board_text[i][-2] for i in range(len(board_text))]).lower()
+                new_board_text = ''
+                for sym in board_text:
+                    if sym in alf or sym == ' ':
+                        new_board_text += sym
                 flag = False 
                 for text in texts:
-                    if fuzz.ratio(text.lower().strip(), board_text.lower().strip()) >= 59:
+                    if fuzz.ratio(text.lower().strip(), new_board_text.strip()) >= 48:
                         flag = True 
                         break
+                    # print(f'{new_board_text.lower().strip()};;;{text.lower().strip()};;;{fuzz.ratio(text.lower().strip(), board_text.lower().strip())}')
+
                 if not flag:
                     current.append('/'.join(str(board_img).split('/')[1:]))
-            print(len(current), count)
             result.append({
                 'num': num,
                 'display': current,
-                'mismatch_percentage': round(len(current) / count, 2)
+                'mismatch_percentage': round(len(current) / count, 2),
+                'content':true_content[0]
                 })
+            print(len(result))
         return result
 
 

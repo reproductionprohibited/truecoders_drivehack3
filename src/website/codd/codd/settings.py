@@ -4,7 +4,6 @@ from dotenv import dotenv_values
 
 
 config = dotenv_values()
-print(config)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,7 +11,9 @@ SECRET_KEY = config['SECRET_KEY']
 
 DEBUG = True if str(config['DEBUG']) == 'True' else False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '*'
+]
 
 INTERNAL_IPS = [
     '127.0.0.1'
@@ -61,11 +62,13 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',
             ],
         },
     },
 ]
 
+LOGIN_URL = '/user/login/'
 LOGIN_REDIRECT_URL = '/'
 if not DEBUG:
     LOGOUT_REDIRECT_URL = '/'

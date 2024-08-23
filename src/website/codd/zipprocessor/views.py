@@ -5,14 +5,14 @@ import random
 import zipfile
 
 from django.urls import reverse_lazy
-from django.views.generic import View, TemplateView
+from django.views.generic import View
 from django.http import HttpResponseRedirect, FileResponse
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 import pandas
 
 from .image_processing import run_image_processing
 from .forms import UploadFileForm
-from .models import Record, InvalidImage
+from .models import Record, InvalidImage, ContentImage
 
 
 def generate_mock_data() -> list[dict]:
@@ -66,8 +66,9 @@ class ProcessingView(View):
     
     def post(self, request, *args, **kwargs):
         filename = kwargs['filename']
-        # result_data = run_image_processing(filepath=f'media/{filename}')
-        result_data = generate_mock_data()
+        result_data = run_image_processing(filepath=f'media/{filename}')
+        print(result_data)
+        # result_data = generate_mock_data()
         request.session['result_data'] = result_data
         return HttpResponseRedirect(reverse_lazy('zipprocessor:result'))
 
@@ -77,12 +78,19 @@ class ResultView(View):
 
     def get(self, request, *args, **kwargs):
         result_data = request.session.get('result_data', None)
+        new_result_data = [
+            {
+                'num': chunk['num'],
+                'display': chunk['display'],
+                'mismatch_percentage': chunk['mismatch_percentage'] * 100
+            } for chunk in result_data
+        ]
         # del request.session['result_data']
         print(result_data)
         for chunk in result_data:
             num = chunk['num']
             mismatch_count = len(chunk['display'])
-            mismatch_percentage = chunk['mismatch_percentage']
+            mismatch_percentage = chunk['mismatch_percentage'] * 100
             record, created = Record.objects.update_or_create(
                 num=num,
                 defaults={
@@ -90,13 +98,15 @@ class ResultView(View):
                     'mismatch_percentage': mismatch_percentage
                 }
             )
-            invalid_image_ids = record.invalid_images.all()
+            record.invalid_images.clear()
             for invalid_image_id in chunk['display']:
-                if invalid_image_id not in invalid_image_ids:
-                    inst = InvalidImage.objects.create(image_id=invalid_image_id)
-                    record.invalid_images.add(inst)
-            
-        return render(request, 'zipprocessor/result.html', context={'result_data': result_data})
+                inst = InvalidImage.objects.create(image_id=invalid_image_id)
+                record.invalid_images.add(inst)
+            for content_image_id in chunk['content']:
+                inst = ContentImage.objects.create(image_id=content_image_id)
+                record.content_images.add(inst)
+
+        return render(request, 'zipprocessor/result.html', context={'result_data': new_result_data})
 
     def post(self, request, *args, **kwargs):
         session_data = request.session.get('result_data', None)
@@ -129,10 +139,10 @@ class CameraDataView(View):
         records = Record.objects.all().order_by('-mismatch_count', '-mismatch_percentage', '-last_modified', 'num')
         data = [
             {
-                'num': record.num,
+                'num': str(record.num).zfill(3),
                 'last_updated': record.last_modified,
                 'mismatch_cnt': record.mismatch_count,
-                'mismatch_percentage': record.mismatch_percentage,
+                'mismatch_percentage': round(record.mismatch_percentage, 2),
                 'mismatch_img_ids': ','.join([img.image_id for img in record.invalid_images.all()])
             } for record in records
         ]
@@ -143,10 +153,10 @@ class CameraDataView(View):
         data = []
         data = [
             {
-                'num': record.num,
+                'num': str(record.num).zfill(3),
                 'last_updated': (record.last_modified + timedelta(hours=3)).strftime("%d/%m/%Y %H:%M:%S"),
                 'mismatch_cnt': record.mismatch_count,
-                'mismatch_percentage': record.mismatch_percentage,
+                'mismatch_percentage': round(record.mismatch_percentage, 2),
                 'mismatch_img_ids': ','.join([img.image_id for img in record.invalid_images.all()])
             } for record in records
         ]
@@ -162,3 +172,16 @@ class CameraDataView(View):
             filename='result.csv'
         )
         return response
+
+
+class CameraDetailsView(View):
+    def get(self, request, *args, **kwargs):
+        camera_id = kwargs['num']
+        camera_record = get_object_or_404(Record, num=camera_id)
+        image_urls = [
+            image.image_id for image in camera_record.invalid_images.all()
+        ]
+        content_urls = list(set([
+            '/'.join(image.image_id.split('/')[1:]) for image in camera_record.content_images.all()
+        ]))
+        return render(request, 'zipprocessor/detail_camera_photos.html', context={'images': image_urls, 'num': camera_id, 'content': content_urls})

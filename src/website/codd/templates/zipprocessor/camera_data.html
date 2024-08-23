@@ -5,30 +5,35 @@
 <div class="container col-xl-10 col-xxl-8 px-4 py-5">
   <div class="row align-items-center g-lg-5 py-5">
       <h1 class="fw-bold text-body-emphasis mb-3">Результат обработки данных с камер</h1>
-    <form method="post">
-      {% csrf_token %}
-      <input type="submit" class="btn btn-primary btn-lg px-4 gap-3" value="Скачать подробный csv">
-    </form>
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th scope="col">Номер камеры</th>
-          <th scope="col">Число невалидных изображений</th>
-          <th scope="col">Процент ошибок</th>
-          <th scope="col">Последнее изменение</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in result_data %}
-        <tr>
-          <td>{{ row.num }}</td>
-          <td>{{ row.mismatch_cnt }}</td>
-          <td>{{ row.mismatch_percentage }}</td>
-          <td>{{ row.last_updated|date:"d E Y H:i" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+
+    {% if result_data %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="submit" class="btn btn-primary btn-lg px-4 gap-3" value="Скачать подробный csv">
+      </form>
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">Номер камеры</th>
+            <th scope="col">Число невалидных изображений</th>
+            <th scope="col">Процент ошибок</th>
+            <th scope="col">Последнее изменение</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in result_data %}
+          <tr>
+            <td><a href="{% url 'zipprocessor:detail_camera_photos' row.num %}">{{ row.num }}</a></td>
+            <td>{{ row.mismatch_cnt }}</td>
+            <td>{{ row.mismatch_percentage }}%</td>
+            <td>{{ row.last_updated|date:"d E Y H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <h3 class="text-warning">Данных нет. Обратитесь в отдел подгрузки данных с камер</h3>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
