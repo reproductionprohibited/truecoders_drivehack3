@@ -38,7 +38,7 @@ class Preprocesser:
 
                     res[str(screenshots_src)] = [content_data_src, num]
                     count += 1 
-                    if count == 3:
+                    if count == 1:
                         break
 
         return res 
@@ -67,22 +67,24 @@ class Preprocesser:
                 texts.append(self.get_needed_texts(img_content))
             path_to_screens = Path(board_imgs)
             current = []
+            count = 0
             for board_img in path_to_screens.rglob("*"):
+                count += 1
                 img = self.preprocess(cv2.imread(board_img))
                 board_text = self.reader.readtext(img)
                 board_text = ' '.join([board_text[i][-2] for i in range(len(board_text))])
                 flag = False 
                 for text in texts:
-                    if fuzz.ratio(text, board_text) > 70:
+                    if fuzz.ratio(text.lower().strip(), board_text.lower().strip()) >= 59:
                         flag = True 
                         break
                 if not flag:
-                    count_mismatch += 1
-                    current.append(board_img)
+                    current.append('/'.join(str(board_img).split('/')[1:]))
+            print(len(current), count)
             result.append({
                 'num': num,
                 'display': current,
-                'mismatch_percentage': round(count_mismatch / len(board_imgs), 2)
+                'mismatch_percentage': round(len(current) / count, 2)
                 })
         return result
 
@@ -93,14 +95,14 @@ def run_image_processing(filepath: str) -> List[Dict]:
     res = pr.run_processing(data)
     return res
 
+
 if __name__ == "__main__":
     # print()
     # print(run_image_processing('../media/1724336905174315'))
-    start = time.time()
+    # start = time.time()
     pr = Preprocesser()
     data = pr.get_data('../media/1724336905174315/hackaton')
     
     res = pr.run_processing(data)
     for el in res:
         print(el)
-    print(time.time() - start)
