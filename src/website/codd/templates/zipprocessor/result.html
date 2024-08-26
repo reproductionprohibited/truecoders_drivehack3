@@ -22,9 +22,19 @@
       <tbody>
         {% for row in result_data %}
         <tr>
-          <td>{{ row.num }}</td>
-          <td>{{ row.display|length }}</td>
-          <td>{{ row.mismatch_percentage }}%</td>
+          {% if row.mismatch_percentage == 0 %}
+            <td>{{ row.num }}</td>
+            <td>{{ row.display|length }}</td>
+            <td>{{ row.mismatch_percentage }}%</td>
+          {% elif row.mismatch_percentage < 60 %}
+            <td class="text-warning">{{ row.num }}</td>
+            <td class="text-warning">{{ row.display|length }}</td>
+            <td class="text-warning">{{ row.mismatch_percentage }}%</td>
+          {% else %}
+            <td class="text-danger">{{ row.num }}</td>
+            <td class="text-danger">{{ row.display|length }}</td>
+            <td class="text-danger">{{ row.mismatch_percentage }}%</td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>

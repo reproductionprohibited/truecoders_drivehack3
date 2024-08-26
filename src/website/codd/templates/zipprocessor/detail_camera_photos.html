@@ -20,6 +20,17 @@
     {% empty %}
       <h4 class="text-center">Нет невалидных изображений</h4>
     {% endfor %}
+    
+    <h4 class="text-warning text-center mt-4">Распознанные изображения</h4>
+    {% for valid_image_url in valid_images %}
+      <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+        <div class="card">
+          <img src="{{ MEDIA_URL }}{{ valid_image_url }}" class="card-img-top">
+        </div>
+      </div>
+    {% empty %}
+      <h4 class="text-center">Нет распознанных изображений</h4>
+    {% endfor %}
 
     <h3 class="text-warning text-center mt-4">Отправленный контент</h3>
     {% for content_image_url in content %}

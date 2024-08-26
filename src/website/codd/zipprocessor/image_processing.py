@@ -3,7 +3,6 @@ from pathlib import Path
 from pprint import pprint
 import os 
 import json
-import time
 
 import numpy as np
 from fuzzywuzzy import fuzz
@@ -37,16 +36,15 @@ class Preprocesser:
                                     content_data_src.append(str(content_path))
 
                     res[str(screenshots_src)] = [content_data_src, num]
-                    count += 1 
-                    if count == 15:
+                    count += 1
+                    if count == 30:
                         break
-
         return res 
     
     def get_needed_texts(self, path_to_img):
         result = self.reader.readtext(path_to_img, batch_size=128)
         text = ' '.join([result[i][-2] for i in range(len(result))])
-        return text 
+        return text
 
 
     def preprocess(self, img):
@@ -63,13 +61,14 @@ class Preprocesser:
         for board_imgs, true_content in data.items():
             texts = []
             num = true_content[1]
-            # if num != '10':
-            #     continue
-            for img_content in true_content[0]: 
+            if str(num) in ['2', '3', '5']:
+                continue
+            for img_content in true_content[0]:
                 texts.append(self.get_needed_texts(img_content))
             path_to_screens = Path(board_imgs)
             current = []
             count = 0
+            valid_images = []
             for board_img in path_to_screens.rglob("*"):
                 count += 1
                 img = self.preprocess(cv2.imread(board_img))
@@ -79,21 +78,25 @@ class Preprocesser:
                 for sym in board_text:
                     if sym in alf or sym == ' ':
                         new_board_text += sym
-                flag = False 
+                flag = False
                 for text in texts:
                     if fuzz.ratio(text.lower().strip(), new_board_text.strip()) >= 48:
                         flag = True 
+                        valid_images.append('/'.join(str(board_img).split('/')[1:]))
                         break
                     # print(f'{new_board_text.lower().strip()};;;{text.lower().strip()};;;{fuzz.ratio(text.lower().strip(), board_text.lower().strip())}')
 
                 if not flag:
                     current.append('/'.join(str(board_img).split('/')[1:]))
-            result.append({
-                'num': num,
-                'display': current,
-                'mismatch_percentage': round(len(current) / count, 2),
-                'content':true_content[0]
-                })
+            result.append(
+                {
+                    'num': num,
+                    'display': current,
+                    'valid_images': valid_images,
+                    'mismatch_percentage': round(len(current) / count, 2),
+                    'content':true_content[0]
+                }
+            )
             print(len(result))
         return result
 
@@ -105,13 +108,13 @@ def run_image_processing(filepath: str) -> List[Dict]:
     return res
 
 
-if __name__ == "__main__":
-    # print()
-    # print(run_image_processing('../media/1724336905174315'))
-    # start = time.time()
-    pr = Preprocesser()
-    data = pr.get_data('../media/1724336905174315/hackaton')
-    
-    res = pr.run_processing(data)
-    for el in res:
-        print(el)
+# if __name__ == "__main__":
+#     # print()
+#     # print(run_image_processing('../media/1724336905174315'))
+#     # start = time.time()
+#     pr = Preprocesser()
+#     data = pr.get_data('../media/1724336905174315/hackaton')
+#     print(len(data))
+#     res = pr.run_processing(data)
+#     for el in res:
+#         print(el)

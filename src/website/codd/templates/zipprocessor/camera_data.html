@@ -24,8 +24,18 @@
           {% for row in result_data %}
           <tr>
             <td><a href="{% url 'zipprocessor:detail_camera_photos' row.num %}">{{ row.num }}</a></td>
-            <td>{{ row.mismatch_cnt }}</td>
-            <td>{{ row.mismatch_percentage }}%</td>
+            {% if row.mismatch_percentage == 0 %}
+              <td>{{ row.mismatch_cnt }}</td>
+              <td>{{ row.mismatch_percentage }}%</td>
+            {% elif row.mismatch_percentage < 60 %}
+              <td class="text-warning">{{ row.mismatch_cnt }}</td>
+              <td class="text-warning">{{ row.mismatch_percentage }}%</td>
+            {% else %}
+              <td class="text-danger">{{ row.mismatch_cnt }}</td>
+              <td class="text-danger">{{ row.mismatch_percentage }}%</td>
+            {% endif %}
+            <!-- <td>{{ row.mismatch_cnt }}</td>
+            <td>{{ row.mismatch_percentage }}%</td> -->
             <td>{{ row.last_updated|date:"d E Y H:i" }}</td>
           </tr>
           {% endfor %}

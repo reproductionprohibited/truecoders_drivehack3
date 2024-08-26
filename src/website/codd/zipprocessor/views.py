@@ -12,7 +12,7 @@ import pandas
 
 from .image_processing import run_image_processing
 from .forms import UploadFileForm
-from .models import Record, InvalidImage, ContentImage
+from .models import Record, InvalidImage, ValidImage, ContentImage
 
 
 def generate_mock_data() -> list[dict]:
@@ -99,9 +99,14 @@ class ResultView(View):
                 }
             )
             record.invalid_images.clear()
+            record.content_images.clear()
+            record.valid_images.clear()
             for invalid_image_id in chunk['display']:
                 inst = InvalidImage.objects.create(image_id=invalid_image_id)
                 record.invalid_images.add(inst)
+            for valid_image_id in chunk['valid_images']:
+                inst = ValidImage.objects.create(image_id=valid_image_id)
+                record.valid_images.add(inst)
             for content_image_id in chunk['content']:
                 inst = ContentImage.objects.create(image_id=content_image_id)
                 record.content_images.add(inst)
@@ -181,7 +186,19 @@ class CameraDetailsView(View):
         image_urls = [
             image.image_id for image in camera_record.invalid_images.all()
         ]
+        valid_image_urls = [
+            image.image_id for image in camera_record.valid_images.all()
+        ]
         content_urls = list(set([
             '/'.join(image.image_id.split('/')[1:]) for image in camera_record.content_images.all()
         ]))
-        return render(request, 'zipprocessor/detail_camera_photos.html', context={'images': image_urls, 'num': camera_id, 'content': content_urls})
+        return render(
+            request,
+            'zipprocessor/detail_camera_photos.html',
+            context={
+                'num': camera_id,
+                'images': image_urls,
+                'content': content_urls,
+                'valid_images': valid_image_urls
+            }
+        )
